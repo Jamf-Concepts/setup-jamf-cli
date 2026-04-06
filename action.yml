@@ -27,10 +27,11 @@ runs:
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
+        INPUT_VERSION: ${{ inputs.version }}
       run: |
         set -euo pipefail
 
-        VERSION="${{ inputs.version }}"
+        VERSION="$INPUT_VERSION"
 
         # Resolve "latest" to the actual tag
         if [ "$VERSION" = "latest" ]; then
@@ -49,8 +50,14 @@ runs:
             ASSET="jamf-cli-${ASSET_VERSION}-darwin-universal.tar.gz"
             ;;
           linux)
-            [ "$ARCH" = "x86_64" ]  && ARCH="amd64"
-            [ "$ARCH" = "aarch64" ] && ARCH="arm64"
+            case "$ARCH" in
+              x86_64)  ARCH="amd64" ;;
+              aarch64) ARCH="arm64" ;;
+              *)
+                echo "::error::Unsupported Linux architecture: $ARCH"
+                exit 1
+                ;;
+            esac
             ASSET="jamf-cli-${ASSET_VERSION}-linux-${ARCH}.tar.gz"
             ;;
           *)
