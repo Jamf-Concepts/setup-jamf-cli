@@ -16,6 +16,7 @@ Supports Linux (`amd64`, `arm64`) and macOS (universal binary).
 |-------|-------------|---------|
 | `version` | Version to install (`1.3.0`, `v1.3.0`, or `latest`) | `latest` |
 | `token` | GitHub token used to resolve the latest version | `${{ github.token }}` |
+| `no-color` | Set `NO_COLOR=1` for all subsequent steps (disables ANSI color in output) | `false` |
 
 ### Outputs
 
@@ -36,7 +37,30 @@ steps:
       JAMF_URL: ${{ secrets.JAMF_URL }}
       JAMF_CLIENT_ID: ${{ secrets.JAMF_CLIENT_ID }}
       JAMF_CLIENT_SECRET: ${{ secrets.JAMF_CLIENT_SECRET }}
-    run: jamf-cli pro computers list
+    run: jamf-cli pro computers list --quiet --no-input
+```
+
+### Recommended CI pattern
+
+Use `--quiet` to suppress non-error output and `--no-input` to fail fast if a command unexpectedly requires interactive input rather than hanging.
+
+```yaml
+steps:
+  - uses: Jamf-Concepts/setup-jamf-cli@v1
+    with:
+      no-color: 'true'
+
+  - name: Apply building
+    env:
+      JAMF_URL: ${{ secrets.JAMF_URL }}
+      JAMF_CLIENT_ID: ${{ secrets.JAMF_CLIENT_ID }}
+      JAMF_CLIENT_SECRET: ${{ secrets.JAMF_CLIENT_SECRET }}
+    run: |
+      jamf-cli pro buildings apply \
+        --from-file building.json \
+        --yes \
+        --quiet \
+        --no-input
 ```
 
 ### Pinned version

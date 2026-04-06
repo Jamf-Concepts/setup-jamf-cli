@@ -13,6 +13,10 @@ inputs:
     description: 'GitHub token used to resolve the latest version'
     required: false
     default: ${{ github.token }}
+  no-color:
+    description: 'Set NO_COLOR=1 for all subsequent steps in the job (disables ANSI color in jamf-cli output)'
+    required: false
+    default: 'false'
 
 outputs:
   version:
@@ -78,3 +82,8 @@ runs:
         echo "$INSTALL_DIR" >> "$GITHUB_PATH"
         echo "version=${ASSET_VERSION}" >> "$GITHUB_OUTPUT"
         echo "Installed jamf-cli v${ASSET_VERSION}"
+
+    - name: Disable color output
+      if: ${{ inputs.no-color == 'true' }}
+      shell: bash
+      run: echo "NO_COLOR=1" >> "$GITHUB_ENV"
