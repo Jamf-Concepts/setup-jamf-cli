@@ -71,12 +71,23 @@ runs:
         esac
 
         URL="https://github.com/Jamf-Concepts/jamf-cli/releases/download/v${ASSET_VERSION}/${ASSET}"
+        CHECKSUMS_URL="https://github.com/Jamf-Concepts/jamf-cli/releases/download/v${ASSET_VERSION}/checksums.txt"
 
         INSTALL_DIR="$HOME/.local/bin"
         mkdir -p "$INSTALL_DIR"
 
+        WORK_DIR=$(mktemp -d)
+        trap 'rm -rf "$WORK_DIR"' EXIT
+
         echo "Downloading $URL"
-        curl -fsSL "$URL" | tar -xz -C "$INSTALL_DIR" jamf-cli
+        curl -fsSL "$URL" -o "$WORK_DIR/$ASSET"
+        curl -fsSL "$CHECKSUMS_URL" -o "$WORK_DIR/checksums.txt"
+
+        echo "Verifying checksum"
+        (cd "$WORK_DIR" && grep "$ASSET" checksums.txt | shasum -a 256 --check --status)
+
+        echo "Extracting"
+        tar -xz -C "$INSTALL_DIR" -f "$WORK_DIR/$ASSET" jamf-cli
         chmod +x "$INSTALL_DIR/jamf-cli"
 
         echo "$INSTALL_DIR" >> "$GITHUB_PATH"
