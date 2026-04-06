@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Jamf CLI (latest)
+        uses: ./
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify installation
+        shell: bash
+        run: jamf-cli --version
+
+      - name: Setup Jamf CLI (pinned version)
+        uses: ./
+        with:
+          version: 'v1.3.0'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify pinned version
+        shell: bash
+        run: |
+          OUTPUT=$(jamf-cli --version)
+          echo "$OUTPUT"
+          echo "$OUTPUT" | grep -q "1.3.0"

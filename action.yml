@@ -1,0 +1,73 @@
+name: 'Setup Jamf CLI'
+description: 'Install jamf-cli and add it to PATH'
+branding:
+  icon: 'terminal'
+  color: 'red'
+
+inputs:
+  version:
+    description: 'Version to install (e.g. "1.3.0", "v1.3.0", or "latest")'
+    required: false
+    default: 'latest'
+  token:
+    description: 'GitHub token used to resolve the latest version'
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  version:
+    description: 'The installed version (without v prefix)'
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install Jamf CLI
+      id: install
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+
+        VERSION="${{ inputs.version }}"
+
+        # Resolve "latest" to the actual tag
+        if [ "$VERSION" = "latest" ]; then
+          VERSION=$(gh release view --repo Jamf-Concepts/jamf-cli --json tagName -q .tagName)
+        fi
+
+        # Normalise: asset names have no v prefix, tags do
+        ASSET_VERSION="${VERSION#v}"
+
+        # Detect platform
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m)
+
+        case "$OS" in
+          darwin)
+            ASSET="jamf-cli-${ASSET_VERSION}-darwin-universal.tar.gz"
+            ;;
+          linux)
+            [ "$ARCH" = "x86_64" ]  && ARCH="amd64"
+            [ "$ARCH" = "aarch64" ] && ARCH="arm64"
+            ASSET="jamf-cli-${ASSET_VERSION}-linux-${ARCH}.tar.gz"
+            ;;
+          *)
+            echo "::error::Unsupported OS: $OS"
+            exit 1
+            ;;
+        esac
+
+        URL="https://github.com/Jamf-Concepts/jamf-cli/releases/download/v${ASSET_VERSION}/${ASSET}"
+
+        INSTALL_DIR="$HOME/.local/bin"
+        mkdir -p "$INSTALL_DIR"
+
+        echo "Downloading $URL"
+        curl -fsSL "$URL" | tar -xz -C "$INSTALL_DIR" jamf-cli
+        chmod +x "$INSTALL_DIR/jamf-cli"
+
+        echo "$INSTALL_DIR" >> "$GITHUB_PATH"
+        echo "version=${ASSET_VERSION}" >> "$GITHUB_OUTPUT"
+        echo "Installed jamf-cli v${ASSET_VERSION}"
